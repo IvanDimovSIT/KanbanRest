@@ -5,6 +5,7 @@ module Service.HelloWorld where
 import Web.Scotty
 import Data.Aeson
 import GHC.Generics
+import Security (decodeJwt)
 
 data HelloWorldOutput = HelloWorldOutput { 
         greeting :: String 
@@ -12,6 +13,10 @@ data HelloWorldOutput = HelloWorldOutput {
 
 instance ToJSON HelloWorldOutput
 
-helloWorldService :: ActionM ()
-helloWorldService = json HelloWorldOutput { greeting = "Hello, World!"}
+helloWorldService :: String -> ActionM ()
+helloWorldService jwtSecret = do
+    decoded <- decodeJwt jwtSecret
+    case decoded of
+        Nothing -> return ()
+        _ -> json HelloWorldOutput { greeting = "Hello, World!"}
 

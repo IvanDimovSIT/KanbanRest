@@ -1,14 +1,22 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Security where
 
 import Web.Scotty
-import Network.Wai
 import Data.Aeson
-import Data.Text (Text, pack, unpack)
+import Data.Text (Text, pack, unpack, stripPrefix)
 import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
 import Data.Time.Clock.POSIX (getPOSIXTime, utcTimeToPOSIXSeconds)
 import Web.JWT
 import qualified Data.Map as Map
 import Persistence (UserModel(..))
+import Data.Map.Strict
+import Data.UUID
+import Network.Wai
+import Data.Time (UTCTime)
+import Prelude hiding (lookup)
+import qualified Data.List
+import qualified Data.Text.Encoding as TE
+import Network.HTTP.Types (status403)
 
 createToken :: UserModel -> String -> IO String
 createToken userModel jwtSecret = do
@@ -20,12 +28,55 @@ createToken userModel jwtSecret = do
         createTokenWithExp expTime = mempty {
             Web.JWT.exp = expTime,
             unregisteredClaims = ClaimsMap $ Map.fromList [
-                    (pack "id", toJSON (userId userModel)), 
+                    (pack "id", toJSON (userId userModel)),
                     (pack "email", toJSON (userEmail userModel))
                 ]
         }
         key = hmacSecret . pack $ jwtSecret
 
-authMiddleware :: Middleware
-authMiddleware app req respond = do
-    error "to impl"
+data KanbanJwtClaims = KanbanJwtClaims { jwtUserEmail :: String, jwtUserId :: UUID }
+
+decodeJwt :: String -> ActionM (Maybe KanbanJwtClaims)
+decodeJwt jwtSecret = do
+    request' <- request
+    let maybeAuthHeader = Data.List.lookup "Authorization" (requestHeaders request')
+    let maybeJwt = maybeAuthHeader >>= stripPrefix "Bearer " . TE.decodeUtf8
+    case maybeJwt of
+        Just jwtToken -> do
+            now <- liftIO getCurrentTime
+            let kanbanClaims = parseJwt jwtSecret jwtToken now
+            case kanbanClaims of
+                Just validClaims -> return $ Just validClaims
+                Nothing -> forbidden
+        Nothing -> forbidden
+    where
+        forbidden = do
+            status status403
+            text "Invalid jwt token"
+            return Nothing
+
+parseJwt :: String -> Text -> UTCTime -> Maybe KanbanJwtClaims
+parseJwt jwtSecret jwtToken now = do
+    let unverifiedClaims = Web.JWT.decode jwtToken
+    verifiedClaims <- verify (toVerify secret) =<< unverifiedClaims
+    let extractedClaims = claims verifiedClaims
+    claimsExp <- Web.JWT.exp extractedClaims
+    currentTimeUTC <- numericDate (utcTimeToPOSIXSeconds now)
+    if currentTimeUTC > claimsExp
+    then Nothing
+    else do
+        let claimsMap = unClaimsMap $ unregisteredClaims extractedClaims
+        jwtId <- lookup "id" claimsMap
+        jwtEmail <- lookup "email" claimsMap
+        case fromJSON jwtId of
+            Success uuid -> case fromJSON jwtEmail of
+                Success emailStr -> do
+                    uuid <- fromString uuid
+                    Just KanbanJwtClaims {
+                        jwtUserId = uuid,
+                        jwtUserEmail = emailStr
+                    }
+                _ -> Nothing
+            _ -> Nothing
+    where
+        secret = hmacSecret . pack $ jwtSecret

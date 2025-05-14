@@ -28,6 +28,7 @@ library
         Service.LoginUser
         Security
     build-depends:    
+        case-insensitive ^>=1.2.1.0,
         base ^>=4.18.3.0,
         scotty >= 0.22,
         text >= 1.2.4.1,
