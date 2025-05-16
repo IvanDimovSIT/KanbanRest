@@ -4,17 +4,9 @@ module Persistence where
 
 import Database.PostgreSQL.Simple
 import Data.UUID (UUID)
-import GHC.Generics
+import GHC.Generics ( Generic )
 import Data.Aeson (ToJSON)
 
-postgresConnection :: ConnectInfo
-postgresConnection = defaultConnectInfo {
-        connectHost = "localhost",
-        connectPort = 8081,
-        connectDatabase = "kanban",
-        connectUser = "postgres",
-        connectPassword = "postgres"
-    }
 
 data UserModel = UserModel {
         userId :: UUID,
@@ -25,3 +17,13 @@ data UserModel = UserModel {
 instance FromRow UserModel
 instance ToJSON UserModel
     
+    
+data BoardModel = BoardModel {
+        boardId :: UUID,
+        boardName :: String,
+        boardUserId :: UUID
+    } deriving (Generic, Show)
+
+instance FromRow BoardModel
+instance ToJSON BoardModel
+   

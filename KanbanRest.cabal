@@ -21,14 +21,14 @@ library
     hs-source-dirs:   src
     exposed-modules:  
         Controller
-        Persistence
+        Configuration
     other-modules:
-        Service.HelloWorld
         Service.RegisterUser
         Service.LoginUser
+        Service.CreateBoard
         Security
+        Persistence
     build-depends:    
-        case-insensitive ^>=1.2.1.0,
         base ^>=4.18.3.0,
         scotty >= 0.22,
         text >= 1.2.4.1,
@@ -41,7 +41,9 @@ library
         jwt >= 0.11.0,
         time >= 1.14,
         bytestring >= 0.11.5,
-        containers >= 0.6.7
+        containers >= 0.6.7,
+        case-insensitive ^>=1.2.1.0,
+        dotenv >= 0.12.0.0
     default-language: Haskell2010
     ghc-options: -O2 -Wall -j
 

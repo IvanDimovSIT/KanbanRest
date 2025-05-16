@@ -1,17 +1,22 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Service.LoginUser where
+module Service.LoginUser(loginUser) where
 
-import Web.Scotty
-import Data.Text
-import Data.Aeson
-import GHC.Generics
-import Database.PostgreSQL.Simple
+import Web.Scotty ( ActionM, liftIO, json, jsonData, status, text )
+import Data.Text ( pack )
+import Data.Aeson ( ToJSON, FromJSON )
+import GHC.Generics ( Generic )
+import Database.PostgreSQL.Simple ( Connection, Only(Only), query )
 import Data.Password.Argon2
-import Network.HTTP.Types
-import Persistence
-import Security
+    ( checkPassword,
+      mkPassword,
+      PasswordCheck(PasswordCheckFail, PasswordCheckSuccess),
+      PasswordHash(PasswordHash, unPasswordHash) )
+import Network.HTTP.Types ( status403 )
+import Persistence ( UserModel(userPasswordHash) )
+import Security ( createToken )
+
 
 data LoginUserInput = LoginUserInput {
         email :: String,
@@ -19,8 +24,10 @@ data LoginUserInput = LoginUserInput {
     }deriving (Generic, Show)
 instance FromJSON LoginUserInput
 
+
 data LoginUserOutput = LoginUserOutput { jwtToken :: String } deriving (Generic, Show)
 instance ToJSON LoginUserOutput
+
 
 loginUser :: Connection -> String -> ActionM ()
 loginUser dbCon jwtSecret = do

@@ -1,22 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Security where
+module Security(createToken, KanbanJwtClaims(..), decodeJwt) where
 
-import Web.Scotty
-import Data.Aeson
+import Web.Scotty ( ActionM, request, status, text, liftIO )
+import Data.Aeson ( ToJSON(toJSON), fromJSON, Result(Success) )
 import Data.Text (Text, pack, unpack, stripPrefix)
-import Data.Time.Clock (getCurrentTime, addUTCTime, nominalDay)
-import Data.Time.Clock.POSIX (getPOSIXTime, utcTimeToPOSIXSeconds)
+import Data.Time.Clock (getCurrentTime, addUTCTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Web.JWT
 import qualified Data.Map as Map
 import Persistence (UserModel(..))
-import Data.Map.Strict
-import Data.UUID
-import Network.Wai
+import Data.Map.Strict ( lookup )
+import Data.UUID ( UUID, fromString )
+import Network.Wai ( Request(requestHeaders) )
 import Data.Time (UTCTime)
 import Prelude hiding (lookup)
 import qualified Data.List
 import qualified Data.Text.Encoding as TE
 import Network.HTTP.Types (status403)
+
 
 createToken :: UserModel -> String -> IO String
 createToken userModel jwtSecret = do
@@ -34,7 +35,9 @@ createToken userModel jwtSecret = do
         }
         key = hmacSecret . pack $ jwtSecret
 
+
 data KanbanJwtClaims = KanbanJwtClaims { jwtUserEmail :: String, jwtUserId :: UUID }
+
 
 decodeJwt :: String -> ActionM (Maybe KanbanJwtClaims)
 decodeJwt jwtSecret = do
@@ -55,6 +58,7 @@ decodeJwt jwtSecret = do
             text "Invalid jwt token"
             return Nothing
 
+
 parseJwt :: String -> Text -> UTCTime -> Maybe KanbanJwtClaims
 parseJwt jwtSecret jwtToken now = do
     let unverifiedClaims = Web.JWT.decode jwtToken
@@ -69,9 +73,9 @@ parseJwt jwtSecret jwtToken now = do
         jwtId <- lookup "id" claimsMap
         jwtEmail <- lookup "email" claimsMap
         case fromJSON jwtId of
-            Success uuid -> case fromJSON jwtEmail of
+            Success uuidStr -> case fromJSON jwtEmail of
                 Success emailStr -> do
-                    uuid <- fromString uuid
+                    uuid <- fromString uuidStr
                     Just KanbanJwtClaims {
                         jwtUserId = uuid,
                         jwtUserEmail = emailStr
