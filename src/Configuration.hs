@@ -1,8 +1,8 @@
 module Configuration (loadConfig) where
 
 import Configuration.Dotenv
-import Persistence
 import Database.PostgreSQL.Simple
+import Validation ( defaultValidator, Validator )
 
 
 getValue :: [(String, String)] -> String -> IO String
@@ -15,7 +15,7 @@ getValue pairs key = case found of
         found = lookup key pairs
 
 
-loadConfig :: IO (String, Connection)
+loadConfig :: IO (String, Connection, Validator)
 loadConfig = do
     envValues <- parseFile ".env"
     jwtSecret <- getValue envValues "jwtSecret"
@@ -35,4 +35,4 @@ loadConfig = do
     putStrLn $ "Connected to DB \"" ++ dbName ++ 
         "\" with user \"" ++ dbUser ++
         "\" on " ++ dbHost ++ ":" ++ dbPort
-    return (jwtSecret, dbCon)
+    return (jwtSecret, dbCon, defaultValidator)

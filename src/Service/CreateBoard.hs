@@ -8,8 +8,9 @@ import Data.UUID ( UUID )
 import Data.UUID.V4 ( nextRandom )
 import Network.HTTP.Types ( status400, status201 )
 import Database.PostgreSQL.Simple ( Connection, Only(Only), query )
-import Security ( decodeJwt, KanbanJwtClaims(jwtUserId) )
+import Security ( KanbanJwtClaims(jwtUserId) )
 import GHC.Generics ( Generic )
+import Validation
 
 
 data CreateBoardInput = CreateBoardInput {
@@ -17,31 +18,34 @@ data CreateBoardInput = CreateBoardInput {
     } deriving (Generic, Show)
 instance FromJSON CreateBoardInput
 
+validateInput :: Validator -> CreateBoardInput -> ActionM Bool
+validateInput validator (CreateBoardInput boardName) = validate [
+            validateBoardName validator boardName
+        ]
+
 
 data CreateBoardOutput = CreateBoardOutput { boardId :: UUID } deriving (Generic, Show)
 instance ToJSON CreateBoardOutput
 
 
-createBoard :: Connection -> String -> ActionM ()
-createBoard dbCon jwtSecret = do
-    decodedJwt <- decodeJwt jwtSecret
-    case decodedJwt of
-        Just decodedJwt -> createBoardAuthenticated dbCon decodedJwt
-        Nothing -> return () 
-
-
-createBoardAuthenticated :: Connection -> KanbanJwtClaims -> ActionM ()
-createBoardAuthenticated dbCon decodedJwt = do
+createBoard :: Connection -> Validator -> KanbanJwtClaims -> ActionM ()
+createBoard dbCon validator decodedJwt = do
     (CreateBoardInput inputName) <- jsonData
-    generatedId <- liftIO $ nextRandom
-    let insertQuery = query dbCon
-            "SELECT add_board(?, ?, ?)"
-            (generatedId, inputName, jwtUserId decodedJwt)
-    [Only result] <- liftIO insertQuery
-    if result
-    then do
-        status status201
-        json CreateBoardOutput {boardId = generatedId}
-    else do
-            status status400
-            text "Name is already in use"
+    isValid <- validateInput validator (CreateBoardInput inputName) 
+    if isValid
+        then performOperation (CreateBoardInput inputName)
+        else return ()
+    where
+        performOperation (CreateBoardInput inputName) = do
+            generatedId <- liftIO nextRandom
+            let insertQuery = query dbCon
+                    "SELECT add_board(?, ?, ?)"
+                    (generatedId, inputName, jwtUserId decodedJwt)
+            [Only result] <- liftIO insertQuery
+            if result
+            then do
+                status status201
+                json CreateBoardOutput {boardId = generatedId}
+            else do
+                    status status400
+                    text "Name is already in use"

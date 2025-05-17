@@ -13,32 +13,45 @@ import qualified Data.UUID.V4 as UUID
 import Data.Password.Argon2
     ( hashPassword, mkPassword, PasswordHash(unPasswordHash) )
 import Network.HTTP.Types ( status400, status201 )
+import Validation
 
 
 data RegisterUserInput = RegisterUserInput {
         email :: String,
         password :: String
-    }deriving (Generic, Show)
+    } deriving (Generic, Show)
 instance FromJSON RegisterUserInput
 
 
 data RegisterUserOutput = RegisterUserOutput { userId :: UUID } deriving (Generic, Show)
 instance ToJSON RegisterUserOutput
 
+validateInput :: Validator -> RegisterUserInput -> ActionM Bool
+validateInput validator (RegisterUserInput email password) = validate [
+            validateEmail validator email,
+            validatePassword validator password
+        ]
 
-registerUser :: Connection -> ActionM ()
-registerUser dbCon = do
+
+registerUser :: Connection -> Validator -> ActionM ()
+registerUser dbCon validator = do
     (RegisterUserInput email password) <- jsonData
-    randomId <- liftIO UUID.nextRandom
-    hashedPassword <- liftIO $ hashPassword $ mkPassword $ pack password
-    let insertQuery = query dbCon
-            "SELECT register_user(?, ?, ?)"
-            (randomId, email, unPasswordHash hashedPassword)
-    [Only result] <- liftIO insertQuery
-    if result
-    then do
-        status status201
-        json RegisterUserOutput {userId = randomId}
-    else do
-            status status400
-            text "Email taken"
+    isValid <- validateInput validator (RegisterUserInput email password)
+    if isValid
+        then performOperation (RegisterUserInput email password)
+        else return ()
+    where
+        performOperation (RegisterUserInput email password) = do
+            randomId <- liftIO UUID.nextRandom
+            hashedPassword <- liftIO $ hashPassword $ mkPassword $ pack password
+            let insertQuery = query dbCon
+                    "SELECT register_user(?, ?, ?)"
+                    (randomId, email, unPasswordHash hashedPassword)
+            [Only result] <- liftIO insertQuery
+            if result
+            then do
+                status status201
+                json RegisterUserOutput {userId = randomId}
+            else do
+                    status status400
+                    text "Email taken"

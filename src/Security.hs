@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Security(createToken, KanbanJwtClaims(..), decodeJwt) where
+module Security(createToken, KanbanJwtClaims(..), secureOperation) where
 
 import Web.Scotty ( ActionM, request, status, text, liftIO )
 import Data.Aeson ( ToJSON(toJSON), fromJSON, Result(Success) )
@@ -37,6 +37,14 @@ createToken userModel jwtSecret = do
 
 
 data KanbanJwtClaims = KanbanJwtClaims { jwtUserEmail :: String, jwtUserId :: UUID }
+
+
+secureOperation :: String -> (KanbanJwtClaims -> ActionM ()) -> ActionM ()
+secureOperation jwtSecret service = do
+    decodedJwt <- decodeJwt jwtSecret
+    case decodedJwt of
+        Just kanbanJwtClaims -> service kanbanJwtClaims
+        Nothing -> return ()
 
 
 decodeJwt :: String -> ActionM (Maybe KanbanJwtClaims)
