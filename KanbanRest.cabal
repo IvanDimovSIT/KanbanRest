@@ -26,6 +26,7 @@ library
         Service.RegisterUser
         Service.LoginUser
         Service.CreateBoard
+        Service.CreateTask
         Security
         Persistence
         Validation

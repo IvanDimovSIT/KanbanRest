@@ -6,6 +6,7 @@ import Database.PostgreSQL.Simple
 import Data.UUID (UUID)
 import GHC.Generics ( Generic )
 import Data.Aeson (ToJSON)
+import Data.Time (LocalTime)
 
 
 data UserModel = UserModel {
@@ -27,3 +28,17 @@ data BoardModel = BoardModel {
 instance FromRow BoardModel
 instance ToJSON BoardModel
    
+data TaskModel = TaskModel {
+        taskId :: UUID,
+        taskBoardId :: UUID,
+        createdBy :: UUID,
+        statusId :: Int,
+        assigned :: UUID,
+        title :: String,
+        contents :: String,
+        createdAt :: LocalTime,
+        updatedAt :: LocalTime
+    } deriving (Generic, Show)
+
+instance FromRow TaskModel
+instance ToJSON TaskModel

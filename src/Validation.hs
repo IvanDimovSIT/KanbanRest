@@ -23,13 +23,21 @@ validate validationResults = if null errors
             text $ pack errorsString
 
 
-data Validator = Validator { emailRegex :: Regex, passwordRegex :: Regex, boardNameRegex :: Regex }
+data Validator = Validator { 
+        emailRegex :: Regex,
+        passwordRegex :: Regex,
+        boardNameRegex :: Regex,
+        taskNameRegex :: Regex,
+        taskDescriptionRegex :: Regex 
+    }
 
 defaultValidator :: Validator
 defaultValidator = Validator {
         emailRegex = makeRegex "^[a-zA-Z0-9+._-]+@[a-zA-Z-]+\\.[a-z]+$",
         passwordRegex = makeRegex "^[a-zA-Z0-9+._\\*$#%@^-]+$",
-        boardNameRegex = makeRegex "^[a-zA-Z0-9#$%+._\\-][a-zA-Z0-9 #$%+._\\-]+$"
+        boardNameRegex = makeRegex "^[a-zA-Z0-9#$%+._\\-][a-zA-Z0-9 #$%+._\\-]+$",
+        taskNameRegex = makeRegex "^[a-zA-Z0-9#$%+._\\-][a-zA-Z0-9 #$%+._\\-]+$",
+        taskDescriptionRegex = makeRegex "^[a-zA-Z0-9#$%+._\\-][a-zA-Z0-9 #$%+._\\-]+$"
     }
 
 validateEmail :: Validator -> String -> ValidationResult
@@ -48,3 +56,19 @@ validateBoardName validator boardName = if len >= 3 && len < 64 && matchTest (bo
     else Left "invalid board name, needs to be not blank and at least 3 symbols"
     where
         len = length boardName
+
+validateTaskName :: Validator -> String -> ValidationResult
+validateTaskName validator taskName = if len >= 3 && len < 64 && matchTest (taskNameRegex validator) taskName
+    then Right ()
+    else Left "invalid task name, needs to be not blank and at least 3 symbols"
+    where
+        len = length taskName
+
+
+validateTaskDescription :: Validator -> String -> ValidationResult
+validateTaskDescription validator taskDescription = if len == 0 || 
+    (len < 512 && matchTest (taskDescriptionRegex validator) taskDescription)
+    then Right ()
+    else Left "invalid task description, needs to be at most 512 symbols"
+    where
+        len = length taskDescription
