@@ -29,8 +29,8 @@ createToken userModel jwtSecret = do
         createTokenWithExp expTime = mempty {
             Web.JWT.exp = expTime,
             unregisteredClaims = ClaimsMap $ Map.fromList [
-                    (pack "id", toJSON (userId userModel)),
-                    (pack "email", toJSON (userEmail userModel))
+                    (pack "id", toJSON (modelUserId userModel)),
+                    (pack "email", toJSON (modelUserEmail userModel))
                 ]
         }
         key = hmacSecret . pack $ jwtSecret

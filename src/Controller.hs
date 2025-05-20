@@ -9,6 +9,7 @@ import Database.PostgreSQL.Simple
 import Security
 import Validation (Validator)
 import Service.CreateTask
+import Service.GetTasks
 
 kanbanREST :: Connection -> String -> Validator -> IO ()
 kanbanREST dbCon jwtSecret validator = scotty 8080 $ do
@@ -16,3 +17,4 @@ kanbanREST dbCon jwtSecret validator = scotty 8080 $ do
     post "/api/auth/login" $ loginUser dbCon jwtSecret
     post "/api/board" $ secureOperation jwtSecret (createBoard dbCon validator)
     post "/api/task" $ secureOperation jwtSecret (createTask dbCon validator)
+    post "/api/board/:boardId/tasks" (getTasks dbCon)

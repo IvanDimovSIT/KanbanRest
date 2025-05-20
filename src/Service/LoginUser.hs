@@ -14,8 +14,8 @@ import Data.Password.Argon2
       PasswordCheck(PasswordCheckFail, PasswordCheckSuccess),
       PasswordHash(PasswordHash, unPasswordHash) )
 import Network.HTTP.Types ( status403 )
-import Persistence ( UserModel(userPasswordHash) )
 import Security ( createToken )
+import Persistence
 
 
 data LoginUserInput = LoginUserInput {
@@ -38,7 +38,7 @@ loginUser dbCon jwtSecret = do
     result <- liftIO selectQuery
     case result of
         (userModel : []) -> do
-                let isValidPassword = validatePassword password (userPasswordHash userModel)
+                let isValidPassword = validatePassword password (modelUserPasswordHash userModel)
                 if isValidPassword
                 then do
                     userJwtToken <- liftIO $ createToken userModel jwtSecret
