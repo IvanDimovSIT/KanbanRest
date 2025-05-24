@@ -28,6 +28,7 @@ library
         Service.CreateBoard
         Service.CreateTask
         Service.GetTasks
+        Service.UpdateTask
         Security
         Persistence
         Validation

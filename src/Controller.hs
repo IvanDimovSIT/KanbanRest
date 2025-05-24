@@ -10,6 +10,7 @@ import Security
 import Validation (Validator)
 import Service.CreateTask
 import Service.GetTasks
+import Service.UpdateTask
 
 kanbanREST :: Connection -> String -> Validator -> IO ()
 kanbanREST dbCon jwtSecret validator = scotty 8080 $ do
@@ -18,3 +19,4 @@ kanbanREST dbCon jwtSecret validator = scotty 8080 $ do
     post "/api/board" $ secureOperation jwtSecret (createBoard dbCon validator)
     post "/api/task" $ secureOperation jwtSecret (createTask dbCon validator)
     post "/api/board/:boardId/tasks" (getTasks dbCon)
+    put "/api/task/:taskId" $ secureOperation jwtSecret (updateTask dbCon validator)

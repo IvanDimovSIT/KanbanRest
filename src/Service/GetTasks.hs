@@ -16,7 +16,6 @@ import Data.Either.Extra
 
 data TaskOutput = TaskOutput {
         taskId :: UUID,
-        taskBoardId :: UUID,
         createdBy :: UUID,
         currentStatus :: String,
         assigned :: Maybe UUID,
@@ -52,7 +51,6 @@ convertToOutput models = GetTasksOutput { tasks = map toOutput models }
         toOutput :: TaskModel -> TaskOutput
         toOutput taskModel = TaskOutput {
                 taskId = modelTaskId taskModel,
-                taskBoardId = modelTaskBoardId taskModel,
                 createdBy = modelCreatedBy taskModel,
                 currentStatus = statusCodeName $ modelStatusId taskModel,
                 assigned = modelAssigned taskModel,
