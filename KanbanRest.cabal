@@ -29,6 +29,7 @@ library
         Service.CreateTask
         Service.GetTasks
         Service.UpdateTask
+        Service.ChangeStatus
         Security
         Persistence
         Validation
