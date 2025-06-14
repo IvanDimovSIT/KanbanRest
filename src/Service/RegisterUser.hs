@@ -23,7 +23,7 @@ data RegisterUserInput = RegisterUserInput {
 instance FromJSON RegisterUserInput
 
 
-data RegisterUserOutput = RegisterUserOutput { userId :: UUID } deriving (Generic, Show)
+newtype RegisterUserOutput = RegisterUserOutput { userId :: UUID } deriving (Generic, Show)
 instance ToJSON RegisterUserOutput
 
 validateInput :: Validator -> RegisterUserInput -> ActionM Bool
@@ -38,20 +38,23 @@ registerUser dbCon validator = do
     (RegisterUserInput email password) <- jsonData
     isValid <- validateInput validator (RegisterUserInput email password)
     if isValid
-        then performOperation (RegisterUserInput email password)
+        then performOperation dbCon (RegisterUserInput email password)
         else return ()
-    where
-        performOperation (RegisterUserInput email password) = do
-            randomId <- liftIO UUID.nextRandom
-            hashedPassword <- liftIO $ hashPassword $ mkPassword $ pack password
-            let insertQuery = query dbCon
-                    "SELECT register_user(?, ?, ?)"
-                    (randomId, email, unPasswordHash hashedPassword)
-            [Only result] <- liftIO insertQuery
-            if result
-            then do
-                status status201
-                json RegisterUserOutput {userId = randomId}
-            else do
-                    status status400
-                    text "Email taken"
+    
+
+performOperation :: Connection -> RegisterUserInput -> ActionM ()
+performOperation dbCon (RegisterUserInput email password) = do
+    randomId <- liftIO UUID.nextRandom
+    hashedPassword <- liftIO $ hashPassword $ mkPassword $ pack password
+    let insertQuery = query dbCon
+            "SELECT register_user(?, ?, ?)"
+            (randomId, email, unPasswordHash hashedPassword)
+    [Only result] <- liftIO insertQuery
+    if result
+    then do
+        status status201
+        json RegisterUserOutput {userId = randomId}
+    else do
+        status status400
+        text "Email taken"
+        

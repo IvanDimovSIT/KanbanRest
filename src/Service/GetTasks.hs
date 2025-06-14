@@ -27,7 +27,7 @@ data TaskOutput = TaskOutput {
 
 instance ToJSON TaskOutput
 
-data GetTasksOutput = GetTasksOutput {
+newtype GetTasksOutput = GetTasksOutput {
         tasks::[TaskOutput]
     } deriving(Generic)
 

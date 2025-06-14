@@ -22,7 +22,7 @@ data CreateTaskInput = CreateTaskInput {
 
 instance FromJSON CreateTaskInput
 
-data CreateTaskOutput = CreateTaskOutput {
+newtype CreateTaskOutput = CreateTaskOutput {
         taskId :: UUID
     } deriving (Generic)
 
@@ -36,20 +36,23 @@ validateInput validator (CreateTaskInput taskName taskDescription _) = validate 
 
 createTask :: Connection -> Validator -> KanbanJwtClaims -> ActionM ()
 createTask dbCon validator decodedJwt = do
-    (CreateTaskInput taskName taskDescription boardId) <- jsonData
-    validationResult <- validateInput validator (CreateTaskInput taskName taskDescription boardId)
+    task <- jsonData
+    validationResult <- validateInput validator task
     if validationResult
-        then createTaskOperation (CreateTaskInput taskName taskDescription boardId)
+        then createTaskOperation dbCon decodedJwt task
         else return ()
     where
-        createTaskOperation (CreateTaskInput taskName taskDescription boardId) = do
-            randomId <- liftIO nextRandom
-            let creatorId = jwtUserId decodedJwt
-            let insertQuery = query dbCon
-                    "SELECT create_task(?, ?, ?, ?, ?)"
-                    (randomId, boardId, creatorId, taskName, taskDescription)
-            [Only result] <- liftIO insertQuery
-            handleResult result randomId
+    
+    
+createTaskOperation :: Connection -> KanbanJwtClaims -> CreateTaskInput -> ActionM ()
+createTaskOperation dbCon decodedJwt (CreateTaskInput taskName taskDescription boardId) = do
+    randomId <- liftIO nextRandom
+    let creatorId = jwtUserId decodedJwt
+    let insertQuery = query dbCon
+            "SELECT create_task(?, ?, ?, ?, ?)"
+            (randomId, boardId, creatorId, taskName, taskDescription)
+    [Only result] <- liftIO insertQuery
+    handleResult result randomId
         
 
 handleResult :: String -> UUID -> ActionM ()

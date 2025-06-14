@@ -11,7 +11,7 @@ import Data.Aeson (FromJSON)
 import Persistence
 import Network.HTTP.Types (status404, status500, status204, status403, status400)
 
-data ChangeStatusInput = ChangeStatusInput {
+newtype ChangeStatusInput = ChangeStatusInput {
         taskStatus :: String
     } deriving (Generic)
 
@@ -30,7 +30,7 @@ changeStatus dbCon decodedJwtClaim = do
 
 
 performOperation :: Connection -> TaskIdStatusId -> UUID -> ActionM ()
-performOperation dbCon (taskId, statusCode) userId = do
+performOperation dbCon task@(taskId, _) userId = do
     taskModel <- liftIO $ fetchTask dbCon taskId
     case taskModel of
         Just taskModel -> do
@@ -39,7 +39,7 @@ performOperation dbCon (taskId, statusCode) userId = do
                 Just boardModel -> do
                     let canPerformUpdate = checkCanPerformUpdate userId taskModel boardModel
                     if canPerformUpdate
-                        then performDbUpdate dbCon (taskId, statusCode)
+                        then performDbUpdate dbCon task
                         else do
                             status status403
                             text "You cannot update this task"

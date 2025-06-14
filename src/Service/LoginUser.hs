@@ -25,7 +25,7 @@ data LoginUserInput = LoginUserInput {
 instance FromJSON LoginUserInput
 
 
-data LoginUserOutput = LoginUserOutput { jwtToken :: String } deriving (Generic, Show)
+newtype LoginUserOutput = LoginUserOutput { jwtToken :: String } deriving (Generic, Show)
 instance ToJSON LoginUserOutput
 
 
